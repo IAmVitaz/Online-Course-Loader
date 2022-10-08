@@ -11,6 +11,7 @@ class Antitreningi:
         self._timeout = entry_link
         self._login = login
         self._password = password
+        self._base_link = base_link
         self._entry_point = base_link + entry_link
 
     def signIn(self):
@@ -29,7 +30,7 @@ class Antitreningi:
 
         linksArray = []
         for item in menuItems:
-            linksArray.append(self._entry_point + item['href'])
+            linksArray.append(self._base_link + item['href'])
         return linksArray
 
     def downloadVideosIfExists(self, lesson: str):
