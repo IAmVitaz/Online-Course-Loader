@@ -15,7 +15,7 @@ linksArray = trainingPlatform.getLessonLinks()
 dataManager = DataManager()
 dataManager.saveListOfURLsToFile(list = linksArray, fileName = "lesson_links.txt")
 
-link = linksArray[0]
+link = "https://antitreningi.ru/student/lessons/lesson?lesson_id=4989236&course_id=118605"
 trainingPlatform.downloadVideosIfExists(lesson = link)
 
 driver.close()
