@@ -14,6 +14,7 @@ class Antitreningi:
         self._password = password
         self._base_link = base_link
         self._entry_point = base_link + entry_link
+        self._current_lesson_name = ""
 
     def signIn(self):
         self._driver.get(self._entry_point)
@@ -43,7 +44,7 @@ class Antitreningi:
             soup = BeautifulSoup(self._driver.page_source, "html.parser")
             
             headerTag = soup.find("div", class_ = "lesson_head")
-            lessonName = self.__getLessonName(headerTag = headerTag)
+            self._current_lesson_name = self.__generateLessonName(headerTag = headerTag)
             video = soup.find("video", class_="js-player")
 
             if video != None:
@@ -55,7 +56,7 @@ class Antitreningi:
 
                 soup = BeautifulSoup(self._driver.page_source, "html.parser")
                 targetVideoUrl = soup.find("source")['src']
-                urllib.request.urlretrieve(url = targetVideoUrl, filename = lessonName) 
+                urllib.request.urlretrieve(url = targetVideoUrl, filename = self._current_lesson_name + ".mp4") 
                 print("Link " + lesson + " have been saved successfully") 
             else:
 
@@ -63,14 +64,17 @@ class Antitreningi:
         except:
             print("Something got wrong with " + lesson)
 
-    def __getLessonName(self, headerTag: Tag) -> str:
+    def __generateLessonName(self, headerTag: Tag) -> str:
         theme = headerTag.find("a", class_="theme_name").text.strip().split('.')[0]
         themeNumber = ''.join(i for i in theme if i.isdigit())
         lessonNameComposit = headerTag.find("h3", class_="lesson_name").text.strip().split('.')
         lesson = lessonNameComposit[0]
         lessonNumber = ''.join(i for i in lesson if i.isdigit())
         lessonNameComposit.pop(0)
-        lessonName = ".".join(lessonNameComposit) + "."
+        lessonName = ".".join(lessonNameComposit)
         lessonName =  " ".join(lessonName.split())
         outputName = themeNumber + "." + lessonNumber + ". " + lessonName
         return (outputName)
+
+    def getLessonName(self) -> str:
+        return self._current_lesson_name
