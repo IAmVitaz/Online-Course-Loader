@@ -6,21 +6,39 @@ from webdriver_manager.chrome import ChromeDriverManager
 from datamanager import DataManager
 from speechrecognition import SpeechRecognizer
 from sites.antitreningi import Antitreningi
+from sites.getcourse import GetCourse
 
-driver = webdriver.Chrome(ChromeDriverManager().install())
+# driver = webdriver.Chrome(ChromeDriverManager().install())
 
-trainingPlatform = Antitreningi(driver=driver, entry_link=FIRST_LINK, login=LOGIN, password=PASSWORD)
-trainingPlatform.signIn()
-linksArray = trainingPlatform.getLessonLinks()
+# trainingPlatform = Antitreningi(driver=driver, entry_link=FIRST_LINK, login=LOGIN, password=PASSWORD)
+# trainingPlatform.signIn()
+# linksArray = trainingPlatform.getLessonLinks()
 
-dataManager = DataManager()
-dataManager.saveListOfURLsToFile(list = linksArray, fileName = "lesson_links.txt")
+# dataManager = DataManager()
+# dataManager.saveListOfURLsToFile(list = linksArray, fileName = "lesson_links.txt")
 
 # link = "https://antitreningi.ru/student/lessons/lesson?lesson_id=4989236&course_id=118605"
-for link in linksArray:
-    trainingPlatform.downloadVideosIfExists(lesson = link)
-driver.close()
+# for link in linksArray:
+#     trainingPlatform.downloadVideosIfExists(lesson = link)
+# driver.close()
 
 # currentName = trainingPlatform.getLessonName()
 # speechRecognizer = SpeechRecognizer()
 # speechRecognizer.extractAudio(videoName=currentName, videoFormat=".mp4", audioFormat=".wav")
+
+
+driver = webdriver.Chrome(ChromeDriverManager().install())
+
+trainingPlatform = GetCourse(
+    driver=driver, 
+    base_link=BASE_LINK, 
+    entry_link=FIRST_LINK, 
+    login=LOGIN, 
+    password=PASSWORD
+)
+trainingPlatform.signIn()
+linksArray = trainingPlatform.getLessonLinks(lessonLink="https://turkeeva.ru/teach/control/stream/view/id/602579567")
+
+dataManager = DataManager()
+dataManager.saveListOfURLsToFile(list = linksArray, fileName = "lesson_links.txt")
+
