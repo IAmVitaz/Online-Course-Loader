@@ -4,7 +4,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 from bs4 import Tag
-import urllib.request
+from time import sleep
+import m3u8_To_MP4
 
 class GetCourse:
     def __init__(self, driver: Driver, base_link: str, entry_link: str, login: str, password: str):
@@ -13,8 +14,8 @@ class GetCourse:
         self._login = login
         self._password = password
         self._base_link = base_link
-        # self._entry_point = base_link + entry_link
         self._current_lesson_name = ""
+        self._course_name = None
 
     def signIn(self):
         self._driver.get(self._base_link)
@@ -31,6 +32,11 @@ class GetCourse:
         wait = WebDriverWait(self._driver, 10)
         wait.until(EC.visibility_of_element_located((By.XPATH, "//div[@class='page-header']")))
         soup = BeautifulSoup(self._driver.page_source, "html.parser")
+
+        #Update course name from the initial link:
+        if not self._course_name:
+            courseNameTag = soup.find("div", class_="page-header")
+            self._course_name = courseNameTag.find("h1").text.strip()
 
         # Check if contains list of modules:
         moduleMenu = soup.find_all("table", class_="stream-table")
@@ -55,44 +61,63 @@ class GetCourse:
         return linksArray
 
     def downloadVideosIfExists(self, lesson: str):
+        video = None
         try:
             print("Trying to open link" + lesson)
             self._driver.get(lesson)
             wait = WebDriverWait(self._driver, 10)
-            wait.until(EC.visibility_of_element_located((By.XPATH, "//div[@class='lesson_name_container']")))
+            wait.until(EC.visibility_of_element_located((By.XPATH, "//div[@class='standard-page-content']")))
             soup = BeautifulSoup(self._driver.page_source, "html.parser")
             
-            headerTag = soup.find("div", class_ = "lesson_head")
-            self._current_lesson_name = self.__generateLessonName(headerTag = headerTag)
-            video = soup.find("video", class_="js-player")
+            moduleNameTag = soup.find("div", class_ = "page-header")
+            lessonNameTag = soup.find("div", class_ = "header-view")
+            self._current_lesson_name = self.__generateLessonName(moduleNameTag=moduleNameTag, lessonNameTag=lessonNameTag)
+            videoTag = soup.find("div", class_ = "lite-page")
+            videos = videoTag.find_all("iframe")
+        except:
+            return print("We did not find video frames for " + lesson)
 
-            if video != None:
-                initialVideoUrl = str(video['src'])
+        try:
+            if videos != None:
+                videoOnThePage = 1
+                for video in videos:
+                    initialVideoUrl = str(video['src'])
+                    self._driver.get(initialVideoUrl)
+                    wait = WebDriverWait(self._driver, 10)
+                    wait.until(EC.visibility_of_element_located((By.XPATH, "//video[@class='vvd-video']")))
+                    sleep(3)
 
-                self._driver.get(initialVideoUrl)
-                wait = WebDriverWait(self._driver, 10)
-                wait.until(EC.visibility_of_element_located((By.XPATH, "//video[@name='media']")))
+                    m3u8Link = self.__findm3u8InNetworkRequests()
+                    if not m3u8Link:
+                        return print("We did not find m3u8 link for " + lesson)
 
-                soup = BeautifulSoup(self._driver.page_source, "html.parser")
-                targetVideoUrl = soup.find("source")['src']
-                urllib.request.urlretrieve(url = targetVideoUrl, filename = self._current_lesson_name + ".mp4") 
-                print("Link " + lesson + " have been saved successfully") 
+                    fileName = self._current_lesson_name
+                    if videoOnThePage != 1:
+                        fileName += "(" + str(videoOnThePage) + ")"
+                    loadDir = "/" + self._course_name + "/"
+                    m3u8_To_MP4.multithread_download(m3u8_uri=m3u8Link, mp4_file_name=fileName, mp4_file_dir=loadDir)
+
+                    videoOnThePage += 1
+                    print("Link " + lesson + " have been saved successfully") 
             else:
-
                 print("Video file " + lesson + " does not exist in the lesson") 
         except:
             print("Something got wrong with " + lesson)
 
-    def __generateLessonName(self, headerTag: Tag) -> str:
-        theme = headerTag.find("a", class_="theme_name").text.strip().split('.')[0]
-        themeNumber = ''.join(i for i in theme if i.isdigit())
-        lessonNameComposit = headerTag.find("h3", class_="lesson_name").text.strip().split('.')
-        lesson = lessonNameComposit[0]
-        lessonNumber = ''.join(i for i in lesson if i.isdigit())
-        lessonNameComposit.pop(0)
-        lessonName = ".".join(lessonNameComposit)
-        lessonName =  " ".join(lessonName.split())
-        outputName = themeNumber + "." + lessonNumber + ". " + lessonName
+    def __findm3u8InNetworkRequests(self) -> str:
+        JS_get_network_requests = "var performance = window.performance || window.msPerformance || window.webkitPerformance || {}; var network = performance.getEntries() || {}; return network;"
+        network_requests = self._driver.execute_script(JS_get_network_requests)
+        for n in network_requests:
+            if "master.m3u8" in n["name"]: 
+                resultLink = n["name"].split("?")[0]
+                return resultLink
+        return None
+
+
+    def __generateLessonName(self, moduleNameTag: Tag, lessonNameTag: Tag) -> str:
+        moduleName = moduleNameTag.find("a").text.strip() 
+        lessonName = lessonNameTag.find("h2", class_="lesson-title-value").text.strip()
+        outputName = moduleName + ". " + lessonName
         return (outputName)
 
     def getLessonName(self) -> str:

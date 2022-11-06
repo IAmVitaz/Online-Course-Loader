@@ -37,8 +37,16 @@ trainingPlatform = GetCourse(
     password=PASSWORD
 )
 trainingPlatform.signIn()
-linksArray = trainingPlatform.getLessonLinks(lessonLink="https://turkeeva.ru/teach/control/stream/view/id/602579567")
+linksArray = trainingPlatform.getLessonLinks(lessonLink="https://turkeeva.ru/teach/control/stream/view/id/623763115")
 
 dataManager = DataManager()
 dataManager.saveListOfURLsToFile(list = linksArray, fileName = "lesson_links.txt")
+
+numberOfLessons = len(linksArray)
+print("Total number of lessons: " + str(numberOfLessons))
+for i in range(0, numberOfLessons, 1):
+    trainingPlatform.downloadVideosIfExists(lesson = linksArray[i])
+    print("Item " + str(i) + " from the list processed successfully")
+
+driver.close()
 
